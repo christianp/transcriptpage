@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+
+import srt
+import shutil
+import re
+import jinja2
+from math import floor
+import re
+from datetime import timedelta
+from pyoembed import oEmbed, PyOembedException
+import argparse
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pathlib import Path
+
+env = Environment(
+    loader=FileSystemLoader('templates'),
+    autoescape=select_autoescape(['html', 'xml'])
+)
+
+re_end = re.compile(r'([.?!]+(?!["\']))')
+
+class PageMaker(object):
+    def __init__(self, caption_file, video_url):
+        self.caption_file = caption_file
+        self.video_url = video_url
+        self.output_path = Path('out')
+
+    def transcript_paragraph(self,t,start):
+        start_seconds = floor(start.total_seconds())
+        start_delta = timedelta(seconds=start_seconds)
+        t = re.sub(r'\n',' ',t)
+        t = re.sub(r'^ +','',t)
+        return {'text': t, 'start_seconds': start_seconds, 'start_delta': start_delta}
+
+    def make_sentences(self):
+        sentences = []
+        with open(self.caption_file) as f:
+            s = srt.parse(f.read())
+            #text = ' '.join(line.content.replace('\n',' ').replace('  ',' ') for line in s).replace('. ','.\n\n')
+            start = None
+            t = ''
+            for line in s:
+                if start is None:
+                    start = line.start
+                bits = re_end.split(line.content)
+                if len(bits)>1:
+                    t += bits[0]+bits[1]
+                    sentences.append(self.transcript_paragraph(t,start))
+                    if len(bits)>2:
+                        t = ''.join(bits[2:])
+                        start = line.start
+                    else:
+                        t = ''
+                else:
+                    t += line.content
+                if re_end.match(t):
+                    sentences.append(self.transcript_paragraph(t,start))
+                    start = None
+                elif t:
+                    t += ' '
+        return sentences
+
+    def get_video_embed(self):
+        data = oEmbed(self.video_url)
+        self.video_embed = data['html']
+        self.title = data['title']
+        return data['html']
+
+    def make_page(self):
+        sentences = self.make_sentences()
+        template = env.get_template('index.html')
+        self.get_video_embed()
+
+        html = template.render(
+            sentences=sentences, 
+            video_url=self.video_url, 
+            video_embed=self.video_embed,
+            title=self.title
+        )
+        
+        self.output_path.mkdir(parents=True,exist_ok=True)
+
+        with open(self.output_path / 'index.html', 'w') as f:
+            f.write(html)
+
+        shutil.copytree('static',self.output_path,dirs_exist_ok=True)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Create a page showing the transcript of a video alongside the video itself.')
+    parser.add_argument('caption_file', type=str,
+                        help='The local path to the .srt captions file')
+    parser.add_argument('video_url', type=str,
+                        help='The URL of the video')
+
+    args = parser.parse_args()
+    pm = PageMaker(caption_file=args.caption_file, video_url=args.video_url)
+    pm.make_page()

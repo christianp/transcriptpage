@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>{{title}}</title>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="initial-scale=1.0">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://player.vimeo.com/api/player.js" defer></script>
+        <script src="script.js" defer></script>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>{{title}}</h1>
+            </header>
+
+            <div id="player">
+                {{video_embed|safe()}}
+                
+            </div>
+            <div id="controls">
+                <input type="checkbox" id="follow-toggle"> 
+                <label for="follow-toggle">Transcript scrolls with video</label>
+            </div>
+            <div id="transcript">
+                {% for sentence in sentences %}
+                <div class="transcript-paragraph" data-start="{{sentence.start_seconds}}">
+                    <a class="player-jump-to" role="button" aria-label="Seek to {{sentence.start_delta}}" title="Seek to {{sentence.start_delta}}" href="{{video_url}}#t={{sentence.start_seconds}}s">{{sentence.start_delta}}</a> 
+                    <p class="text">{{sentence.text}}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+
+    </body>
+</html>
