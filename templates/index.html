@@ -12,6 +12,10 @@
         <main>
             <header>
                 <h1>{{title}}</h1>
+
+                {% if slides_url %}
+                <p><a target="_blank" href="{{slides_url}}">Slides for this talk</a></p>
+                {% endif %}
             </header>
 
             <div id="player">

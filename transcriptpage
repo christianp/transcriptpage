@@ -20,9 +20,10 @@ env = Environment(
 re_end = re.compile(r'([.?!]+(?!["\']))')
 
 class PageMaker(object):
-    def __init__(self, caption_file, video_url):
+    def __init__(self, caption_file, video_url, slides_url):
         self.caption_file = caption_file
         self.video_url = video_url
+        self.slides_url = slides_url
         self.output_path = Path('out')
 
     def transcript_paragraph(self,t,start):
@@ -74,6 +75,7 @@ class PageMaker(object):
         html = template.render(
             sentences=sentences, 
             video_url=self.video_url, 
+            slides_url=self.slides_url,
             video_embed=self.video_embed,
             title=self.title
         )
@@ -91,7 +93,10 @@ if __name__ == '__main__':
                         help='The local path to the .srt captions file')
     parser.add_argument('video_url', type=str,
                         help='The URL of the video')
+    parser.add_argument('--slides',type=str,
+                        help='The URL of slides for the talk',
+                        dest='slides_url')
 
     args = parser.parse_args()
-    pm = PageMaker(caption_file=args.caption_file, video_url=args.video_url)
+    pm = PageMaker(caption_file=args.caption_file, video_url=args.video_url, slides_url=args.slides_url)
     pm.make_page()
